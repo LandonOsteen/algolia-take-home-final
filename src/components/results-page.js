@@ -8,77 +8,64 @@ import {
   configure,
 } from 'instantsearch.js/es/widgets';
 import { createInsightsMiddleware } from 'instantsearch.js/es/middlewares';
-import resultHit from '../templates/result-hit';
 import insightsClient from 'search-insights';
+import resultHit from '../templates/result-hit';
+
+const ALGOLIA_APP_ID = 'A8CT7VGXWC';
+const ALGOLIA_API_KEY = '31df2c77aeccb16428b670bff02cb14c';
+const ALGOLIA_INDEX_NAME = 'products';
 
 // Initialize Algolia Insights
-insightsClient('init', {
-  appId: 'A8CT7VGXWC',
-  apiKey: '31df2c77aeccb16428b670bff02cb14c',
-});
-
-// Sets a consistent user token if not already set
-if (!insightsClient('getUserToken')) {
-  const userToken = `user-${Math.random().toString(36).substr(2, 9)}`;
-  insightsClient('setUserToken', userToken);
-}
+insightsClient('init', { appId: ALGOLIA_APP_ID, apiKey: ALGOLIA_API_KEY });
 
 class ResultPage {
   constructor() {
-    this._registerClient();
+    this._initSearch();
     this._registerWidgets();
     this._startSearch();
   }
 
-  _registerClient() {
-    this._searchClient = algoliasearch(
-      'A8CT7VGXWC',
-      '31df2c77aeccb16428b670bff02cb14c'
-    );
-
+  _initSearch() {
+    this._searchClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_API_KEY);
     this._searchInstance = instantsearch({
-      indexName: 'products',
+      indexName: ALGOLIA_INDEX_NAME,
       searchClient: this._searchClient,
-      insights: true,
+      insights: true, // Enable insights
     });
+
+    const insightsMiddleware = createInsightsMiddleware({ insightsClient });
+    this._searchInstance.use(insightsMiddleware);
   }
 
   _registerWidgets() {
     this._searchInstance.addWidgets([
-      configure({
-        clickAnalytics: true,
-      }),
-      searchBox({
-        container: '#searchbox',
-        placeholder: 'Search for products...',
-      }),
+      configure({ clickAnalytics: true }),
+      searchBox({ container: '#searchbox' }),
       hits({
         container: '#hits',
-        templates: {
-          item: resultHit,
-        },
-        transformItems(items) {
-          return items.map((item) => ({
-            ...item,
-            url: `/products/${item.objectID}`,
-          }));
-        },
+        templates: { item: resultHit },
+        transformItems: (items) =>
+          items.map((item) => ({ ...item, url: `/products/${item.objectID}` })),
       }),
-      pagination({
-        container: '#pagination',
-      }),
-      refinementList({
-        container: '#brand-facet',
-        attribute: 'brand',
-      }),
+      pagination({ container: '#pagination' }),
+      refinementList({ container: '#brand-facet', attribute: 'brand' }),
       refinementList({
         container: '#categories-facet',
         attribute: 'categories',
       }),
     ]);
 
-    // Add event listener for "Add to Cart" button clicks
-    document.addEventListener('click', this._handleAddToCart);
+    // Add event listeners after render
+    this._searchInstance.on('render', () => {
+      document.querySelectorAll('.result-hit__cart').forEach((button) => {
+        button.addEventListener('click', this._handleAddToCart);
+      });
+
+      // Add click event listener for product clicks
+      document.querySelectorAll('.result-hit').forEach((hit) => {
+        hit.addEventListener('click', this._handleProductClick);
+      });
+    });
   }
 
   _startSearch() {
@@ -86,33 +73,32 @@ class ResultPage {
   }
 
   _handleAddToCart = (event) => {
-    if (event.target.classList.contains('result-hit__cart')) {
-      const objectID = event.target.getAttribute('data-object-id');
-      const queryID = event.target.getAttribute('data-query-id');
+    const objectID = event.currentTarget.getAttribute('data-object-id');
+    const queryID = event.currentTarget.getAttribute('data-query-id');
 
-      if (!objectID || !queryID) {
-        console.error('Missing objectID or queryID');
-        return;
-      }
+    insightsClient('convertedObjectIDsAfterSearch', {
+      eventName: 'Product Added to Cart',
+      index: ALGOLIA_INDEX_NAME,
+      objectIDs: [objectID],
+      queryID,
+    });
+  };
 
-      const userToken = insightsClient('getUserToken');
+  _handleProductClick = (event) => {
+    const objectID = event.currentTarget.getAttribute('data-object-id');
+    const queryID = event.currentTarget.getAttribute('data-query-id');
+    const position = parseInt(
+      event.currentTarget.getAttribute('data-position'),
+      10
+    );
 
-      if (!userToken) {
-        console.error('User token is not set.');
-        return;
-      }
-
-      console.log('Add to Cart clicked:', objectID, queryID);
-
-      // Send conversion event to Algolia Insights
-      insightsClient('convertedObjectIDsAfterSearch', {
-        eventName: 'Product Added to Cart',
-        index: 'products',
-        objectIDs: [objectID],
-        queryID,
-        userToken,
-      });
-    }
+    insightsClient('clickedObjectIDsAfterSearch', {
+      eventName: 'Product Clicked',
+      index: ALGOLIA_INDEX_NAME,
+      objectIDs: [objectID],
+      positions: [position],
+      queryID,
+    });
   };
 }
 

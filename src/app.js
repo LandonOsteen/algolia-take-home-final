@@ -1,4 +1,4 @@
-import ResultsPage from './components/results-page';
+import ResultPage from './components/results-page';
 
 class SpencerAndWilliamsSearch {
   constructor() {
@@ -6,7 +6,7 @@ class SpencerAndWilliamsSearch {
   }
 
   _initSearch() {
-    this.resultPage = new ResultsPage();
+    this.resultPage = new ResultPage();
   }
 }
 
