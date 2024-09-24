@@ -77,7 +77,7 @@ class ResultPage {
       }),
     ]);
 
-    // Add event listener for "Add to Cart" button clicks
+    // Event listener for "Add to Cart" button clicks
     document.addEventListener('click', this._handleAddToCart);
   }
 
@@ -85,6 +85,7 @@ class ResultPage {
     this._searchInstance.start();
   }
 
+  // Handles conversion events
   _handleAddToCart = (event) => {
     if (event.target.classList.contains('result-hit__cart')) {
       const objectID = event.target.getAttribute('data-object-id');
@@ -101,8 +102,6 @@ class ResultPage {
         console.error('User token is not set.');
         return;
       }
-
-      console.log('Add to Cart clicked:', objectID, queryID);
 
       // Send conversion event to Algolia Insights
       insightsClient('convertedObjectIDsAfterSearch', {
