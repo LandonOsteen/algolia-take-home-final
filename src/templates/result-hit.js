@@ -1,5 +1,3 @@
-// src/templates/result-hit.js
-
 const resultHit = (hit) => `
   <div class="result-hit">
     <div class="result-hit__image-container">
