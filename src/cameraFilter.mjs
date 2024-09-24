@@ -3,24 +3,26 @@ dotenv.config();
 import algoliasearch from 'algoliasearch';
 import products from '../data/products.json' assert { type: 'json' };
 
-// Connect and authenticate with your Algolia app
-const client = algoliasearch('A8CT7VGXWC', '31df2c77aeccb16428b670bff02cb14c');
+// Connect and authenticate with Algolia app
+const client = algoliasearch('A8CT7VGXWC', '0de76aca15493b47f2bf45bd3fa8c75a');
 
 // Initialize the index
-const index = client.initIndex('cameras'); // Update 'cameras' to your actual index name
+const index = client.initIndex('products');
 
 // Function to reduce the price of cameras by 20% and round down to the nearest integer
 const updatePrices = (objects) => {
-  return objects
-    .filter(
-      (product) =>
-        Array.isArray(product.categories) &&
-        product.categories.includes('Cameras & Camcorders')
-    )
-    .map((product) => ({
-      ...product,
-      price: Math.floor(product.price * 0.8),
-    }));
+  return objects.map((product) => {
+    if (
+      Array.isArray(product.categories) &&
+      product.categories.includes('Cameras & Camcorders')
+    ) {
+      return {
+        ...product,
+        price: Math.floor(product.price * 0.8),
+      };
+    }
+    return product;
+  });
 };
 
 // Fetch and index objects in Algolia
